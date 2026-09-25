@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - AI Attendance{% endblock %}
+{% block header_title %}Registered Users Directory{% endblock %}
+{% block header_subtitle %}Manage personnel identities, biometric encodings, and enrolled dataset samples{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="card-title">
+            <i class="fa-solid fa-users-gear"></i>
+            <h3>Enrolled Personnel</h3>
+        </div>
+        <div class="card-actions">
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-user-plus"></i> Register New User
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Enrolled Encodings</th>
+                    <th>Registered At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td><span class="user-id-chip">{{ u['user_id'] }}</span></td>
+                    <td class="font-medium">
+                        <div class="user-cell">
+                            <div class="avatar-circle">{{ u['name'][0]|upper }}</div>
+                            <span>{{ u['name'] }}</span>
+                        </div>
+                    </td>
+                    <td class="text-muted">{{ u['email'] }}</td>
+                    <td>
+                        <span class="badge badge-info">
+                            <i class="fa-solid fa-brain"></i> {{ u['encodings_count'] }} vectors
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ u['created_at'] }}</td>
+                    <td>
+                        <form action="{{ url_for('delete_user', user_id=u['user_id']) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ u['name'] }} ({{ u['user_id'] }}) and all associated face encodings and attendance history?');" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="fa-solid fa-trash-can"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row">
+                    <td colspan="6">
+                        No users registered yet.
+                        <div style="margin-top: 0.5rem;">
+                            <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Enrol First User</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Capture Face Encodings - {{ user['name'] }}{% endblock %}
+{% block header_title %}Facial Dataset Capture{% endblock %}
+{% block header_subtitle %}Step 2: Take multiple face angles for {{ user['name'] }} ({{ user['user_id'] }}){% endblock %}
+
+{% block content %}
+<div class="grid-2-col">
+    <!-- Webcam Capture Viewport -->
+    <div class="card camera-card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-camera"></i>
+                <h3>Face Capture Console</h3>
+            </div>
+            <span class="badge badge-warning" id="capture-status-badge">Sample <span id="current-sample-num">1</span> of 5</span>
+        </div>
+
+        <div class="video-container">
+            <video id="capture-video" autoplay playsinline muted class="live-stream-img"></video>
+            <canvas id="capture-canvas" style="display: none;"></canvas>
+
+            <div class="hud-overlay">
+                <div class="face-guide-oval"></div>
+                <div class="hud-instruction" id="pose-instruction">Look straight ahead at the camera</div>
+            </div>
+        </div>
+
+        <div class="camera-controls flex-between">
+            <button type="button" class="btn btn-secondary" id="btn-start-cam" onclick="initWebcam()">
+                <i class="fa-solid fa-rotate-right"></i> Restart Camera
+            </button>
+            <button type="button" class="btn btn-success btn-lg" id="btn-capture-sample" onclick="captureNextSample()">
+                <i class="fa-solid fa-camera"></i> Capture Sample <span id="btn-sample-index">1</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Right Side Progress & Thumbnails -->
+    <div class="flex-col gap-4">
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="card-title">
+                    <i class="fa-solid fa-brain"></i>
+                    <h3>Encoding Extraction</h3>
+                </div>
+            </div>
+
+            <div class="user-meta-box">
+                <div class="meta-row"><strong>Name:</strong> <span>{{ user['name'] }}</span></div>
+                <div class="meta-row"><strong>User ID:</strong> <span class="user-id-chip">{{ user['user_id'] }}</span></div>
+                <div class="meta-row"><strong>Email:</strong> <span>{{ user['email'] }}</span></div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span>Dataset Progress</span>
+                    <strong id="progress-percent">0%</strong>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Samples Gallery -->
+            <div class="samples-gallery">
+                <div class="sample-slot" id="slot-1"><span>1: Straight</span></div>
+                <div class="sample-slot" id="slot-2"><span>2: Slight Left</span></div>
+                <div class="sample-slot" id="slot-3"><span>3: Slight Right</span></div>
+                <div class="sample-slot" id="slot-4"><span>4: Chin Up</span></div>
+                <div class="sample-slot" id="slot-5"><span>5: Smile</span></div>
+            </div>
+
+            <div id="capture-alert" class="alert alert-info" style="margin-top: 1rem;">
+                <i class="fa-solid fa-info-circle"></i>
+                <span id="capture-alert-text">Click "Capture Sample 1" when your face is centered inside the guide oval.</span>
+            </div>
+
+            <div class="finish-section" id="finish-section" style="display: none; margin-top: 1.5rem;">
+                <a href="{{ url_for('index') }}" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-circle-check"></i> Registration Complete! Go to Live Feed
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentStep = 1;
+const totalSteps = 5;
+const userId = "{{ user['user_id'] }}";
+const video = document.getElementById('capture-video');
+const canvas = document.getElementById('capture-canvas');
+
+const instructions = [
+    "Look straight ahead at the camera",
+    "Turn head slightly to the LEFT",
+    "Turn head slightly to the RIGHT",
+    "Tilt chin slightly UP",
+    "Show a natural SMILE"
+];
+
+async function initWebcam() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: "user" }
+        });
+        video.srcObject = stream;
+    } catch (err) {
+        alert("Unable to access webcam: " + err.message + ". Please verify camera permissions.");
+    }
+}
+
+async function captureNextSample() {
+    if (currentStep > totalSteps) return;
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+    const alertBox = document.getElementById('capture-alert');
+    const alertText = document.getElementById('capture-alert-text');
+    alertBox.className = "alert alert-warning";
+    alertText.innerText = `Processing sample ${currentStep} face encodings...`;
+
+    try {
+        const res = await fetch('/api/save_face_sample', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                sample_index: currentStep,
+                image: dataUrl
+            })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            // Update slot with preview image
+            const slot = document.getElementById(`slot-${currentStep}`);
+            slot.innerHTML = `<img src="${dataUrl}" class="sample-thumb" alt="Sample ${currentStep}">`;
+            slot.classList.add('completed');
+
+            currentStep++;
+            const pct = Math.round(((currentStep - 1) / totalSteps) * 100);
+            document.getElementById('progress-percent').innerText = `${pct}%`;
+            document.getElementById('progress-fill').style.width = `${pct}%`;
+
+            if (currentStep <= totalSteps) {
+                document.getElementById('current-sample-num').innerText = currentStep;
+                document.getElementById('btn-sample-index').innerText = currentStep;
+                document.getElementById('pose-instruction').innerText = instructions[currentStep - 1];
+                alertBox.className = "alert alert-success";
+                alertText.innerText = `Sample saved! Next: ${instructions[currentStep - 1]}`;
+            } else {
+                document.getElementById('pose-instruction').innerText = "All samples captured successfully!";
+                document.getElementById('btn-capture-sample').disabled = true;
+                document.getElementById('btn-capture-sample').innerHTML = `<i class="fa-solid fa-check"></i> Done`;
+                alertBox.className = "alert alert-success";
+                alertText.innerText = "All 5 face encodings registered and saved in SQLite database!";
+                document.getElementById('finish-section').style.display = "block";
+            }
+        } else {
+            alertBox.className = "alert alert-danger";
+            alertText.innerText = data.message || "Failed to process face sample. Please retry.";
+        }
+    } catch(err) {
+        alertBox.className = "alert alert-danger";
+        alertText.innerText = "Network error while saving sample: " + err.message;
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    initWebcam();
+});
+</script>
+{% endblock %}

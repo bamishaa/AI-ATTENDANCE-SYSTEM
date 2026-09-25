@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Live Face Recognition & Attendance{% endblock %}
+{% block header_title %}Live Face Attendance Feed{% endblock %}
+{% block header_subtitle %}Webcam stream with OpenCV face detection & 128-d encoding recognition{% endblock %}
+
+{% block content %}
+<div class="grid-2-col">
+    <!-- Camera Stream Card -->
+    <div class="card camera-card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-satellite-dish pulse-icon"></i>
+                <h3>Real-Time Optical Camera</h3>
+            </div>
+            <div class="stream-indicators">
+                <span class="badge badge-success"><span class="dot"></span> 30 FPS Stream</span>
+                <span class="badge badge-info">Auto-Mark: ON</span>
+            </div>
+        </div>
+
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" alt="Webcam Stream" class="live-stream-img" id="live-stream-img" onerror="this.onerror=null; this.src=''; document.getElementById('camera-fallback').style.display='flex';">
+            
+            <div id="camera-fallback" class="camera-fallback" style="display: none;">
+                <i class="fa-solid fa-video-slash"></i>
+                <p>Webcam stream is loading or permission required.</p>
+                <small>Ensure your webcam is connected and allowed in browser.</small>
+            </div>
+
+            <div class="hud-overlay">
+                <div class="hud-reticle top-left"></div>
+                <div class="hud-reticle top-right"></div>
+                <div class="hud-reticle bottom-left"></div>
+                <div class="hud-reticle bottom-right"></div>
+            </div>
+        </div>
+
+        <div class="camera-controls">
+            <div class="recognition-status-pill" id="live-recognition-status">
+                <i class="fa-solid fa-user-check"></i>
+                <span>Scanning field of view...</span>
+            </div>
+            <div class="camera-tips">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Stand 2–4 feet from camera in good lighting. Duplicate entries for today are automatically filtered.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side Stats & Live Log -->
+    <div class="flex-col gap-4">
+        <!-- Metric Quick Cards -->
+        <div class="mini-stats-grid">
+            <div class="mini-stat-card">
+                <div class="icon-box bg-blue"><i class="fa-solid fa-users"></i></div>
+                <div>
+                    <h4 id="stat-total-users">{{ total_users }}</h4>
+                    <span>Registered Users</span>
+                </div>
+            </div>
+            <div class="mini-stat-card">
+                <div class="icon-box bg-green"><i class="fa-solid fa-user-check"></i></div>
+                <div>
+                    <h4 id="stat-present-today">{{ present_today }}</h4>
+                    <span>Present Today</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Detections / Live Feed -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-bolt"></i>
+                    <h3>Today's Recent Check-ins</h3>
+                </div>
+                <a href="{{ url_for('attendance') }}" class="btn-text">View All <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table" id="recent-table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-attendance-tbody">
+                        {% for record in recent_attendance %}
+                        <tr>
+                            <td><span class="user-id-chip">{{ record['user_id'] }}</span></td>
+                            <td class="font-medium">{{ record['name'] }}</td>
+                            <td class="text-muted">{{ record['time'] }}</td>
+                            <td><span class="badge badge-success">{{ record['status'] }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr class="empty-row">
+                            <td colspan="4">No check-ins yet today. Face the camera to mark attendance!</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Tips Card -->
+        <div class="card guide-card">
+            <h4><i class="fa-solid fa-shield-halved"></i> Biometric Verification Rules</h4>
+            <ul class="guide-list">
+                <li><i class="fa-solid fa-check"></i> <strong>Anti-Duplicate:</strong> A registered person is marked present only once per calendar date.</li>
+                <li><i class="fa-solid fa-check"></i> <strong>Threshold:</strong> Encodings compare Euclidean distance (< 0.50) across 128 features.</li>
+                <li><i class="fa-solid fa-check"></i> <strong>First Detection:</strong> First successful recognition time is locked as today's timestamp.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Poll live status every 2.5 seconds
+setInterval(async () => {
+    try {
+        const res = await fetch('/api/live_status');
+        const data = await res.json();
+        if (data.latest_event && data.latest_event.name !== "No face") {
+            const pill = document.getElementById('live-recognition-status');
+            if (pill) {
+                pill.innerHTML = `<i class="fa-solid fa-check-circle"></i> <strong>${data.latest_event.name}</strong> (${data.latest_event.id}) - ${data.latest_event.status}`;
+                pill.className = "recognition-status-pill active-match";
+            }
+        }
+        if (data.present_today !== undefined) {
+            const el = document.getElementById('stat-present-today');
+            if (el) el.innerText = data.present_today;
+        }
+    } catch(e) {}
+}, 2500);
+</script>
+{% endblock %}

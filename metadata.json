@@ -1,0 +1,6 @@
+{
+  "name": "AI Face Attendance Management System",
+  "description": "AI-based Attendance Management System using OpenCV, Face Recognition, Python Flask, and SQLite with real-time webcam detection.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

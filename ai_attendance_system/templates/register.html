@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Register New Person - AI Attendance{% endblock %}
+{% block header_title %}User Registration{% endblock %}
+{% block header_subtitle %}Step 1: Enter person's details before capturing facial biometric dataset{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="card form-card">
+        <div class="card-header border-bottom">
+            <div class="card-title">
+                <i class="fa-solid fa-id-card"></i>
+                <h3>Personnel Information</h3>
+            </div>
+            <span class="badge badge-primary">Step 1 of 2</span>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('register') }}" method="POST" class="styled-form">
+            <div class="form-group">
+                <label for="name"><i class="fa-solid fa-user"></i> Full Name</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="e.g. John Doe" required autofocus>
+                <small class="field-hint">Legal or official name to display on the recognition HUD.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="user_id"><i class="fa-solid fa-fingerprint"></i> Student / Employee ID</label>
+                <input type="text" id="user_id" name="user_id" class="form-control uppercase" placeholder="e.g. EMP-1042 or STU-2026" required>
+                <small class="field-hint">Unique alphanumeric identifier used as primary key in SQLite database.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email"><i class="fa-solid fa-envelope"></i> Email Address</label>
+                <input type="email" id="email" name="email" class="form-control" placeholder="e.g. john.doe@institution.edu" required>
+                <small class="field-hint">Used for notifications and record auditing.</small>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('users') }}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <span>Continue to Face Capture</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Registration instructions card -->
+    <div class="card instruction-card">
+        <h3><i class="fa-solid fa-circle-question"></i> Registration Guidelines</h3>
+        <div class="guideline-step">
+            <div class="step-num">1</div>
+            <div>
+                <strong>Enter Valid ID & Name</strong>
+                <p>Ensure the ID is unique. Duplicate IDs will be rejected by the SQLite database constraint.</p>
+            </div>
+        </div>
+        <div class="guideline-step">
+            <div class="step-num">2</div>
+            <div>
+                <strong>Webcam Face Capture</strong>
+                <p>In Step 2, the system takes multiple face samples from your webcam to construct high-accuracy 128-d face encodings.</p>
+            </div>
+        </div>
+        <div class="guideline-step">
+            <div class="step-num">3</div>
+            <div>
+                <strong>Encodings Generation</strong>
+                <p>The Python backend computes deep metric facial landmarks and stores encodings in <code>face_encodings</code>.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

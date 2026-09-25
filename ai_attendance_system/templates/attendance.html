@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Log & Search - AI System{% endblock %}
+{% block header_title %}Attendance Records{% endblock %}
+{% block header_subtitle %}Search, filter, and audit biometric check-in history{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="card-title">
+            <i class="fa-solid fa-list-check"></i>
+            <h3>Attendance Log Database</h3>
+        </div>
+        <div class="card-actions">
+            <a href="{{ url_for('export_attendance_csv') }}" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-download"></i> Download CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter and Search Toolbar -->
+    <div class="filter-toolbar">
+        <form action="{{ url_for('attendance') }}" method="GET" class="filter-form">
+            <div class="filter-field">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" name="search" value="{{ search }}" placeholder="Search by name or ID..." class="form-control">
+            </div>
+
+            <div class="filter-field">
+                <i class="fa-solid fa-calendar-day"></i>
+                <input type="date" name="date" value="{{ date_filter }}" class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-filter"></i> Apply Filter
+            </button>
+
+            {% if search or date_filter %}
+            <a href="{{ url_for('attendance') }}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-xmark"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Record ID</th>
+                    <th>User ID</th>
+                    <th>Full Name</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in records %}
+                <tr>
+                    <td>#{{ row['id'] }}</td>
+                    <td><span class="user-id-chip">{{ row['user_id'] }}</span></td>
+                    <td class="font-medium">{{ row['name'] }}</td>
+                    <td>{{ row['date'] }}</td>
+                    <td class="text-muted">{{ row['time'] }}</td>
+                    <td>
+                        <span class="badge badge-success">
+                            <i class="fa-solid fa-check"></i> {{ row['status'] }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="conf-pill">
+                            {{ (row['confidence'] * 100)|round|int if row['confidence'] else 95 }}%
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row">
+                    <td colspan="7">No records matched your search/filter criteria.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
